@@ -1,0 +1,22 @@
+[package]
+name = "chust8"
+version = "0.1.0"
+authors = ["Thordreck <paezguerraalvaro@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+# Haven't decided yet what GUI lib I'll use
+#orbtk = "0.3.1-alpha1"
+arrayvec          = "0.5.1"
+strum_macros      = "0.18.0"
+strum             = "0.18.0"
+num-traits        = "0.2.11"
+rand              = "0.7.3"
+static_assertions = "1.1.0"
+
+[dependencies.sdl2]
+version = "0.34.0"
+default-features = false
+features = ["image", "unsafe_textures"]
