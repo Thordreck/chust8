@@ -7,3 +7,4 @@ pub mod opcodes;
 pub mod timer;
 pub mod stack;
 pub mod display;
+pub mod clock;
