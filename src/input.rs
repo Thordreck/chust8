@@ -54,10 +54,13 @@ impl<'lifetime> Keypad<'lifetime>
 mod tests
 {
     use super::*;
+    use crate::helpers::tests::*;
 
     #[test]
-    fn keypad_to_scancode()
+    fn keypad_to_scancode() -> Result<(), String>
     {
+        let mutex = test_lock()?;
+
         let context     = sdl2::init().unwrap();
         let events_pump = context.event_pump().unwrap();
 
@@ -67,5 +70,7 @@ mod tests
         {
             assert_eq!(keypad.to_scancode(hex), keypad.keymap[hex as usize]);
         }
+
+        Ok(())
     }
 }

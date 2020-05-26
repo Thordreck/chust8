@@ -117,6 +117,7 @@ mod tests
 {
     use super::*;
     use std::time::Duration;
+    use crate::helpers::tests::*;
 
     #[test]
     fn sample_generation()
@@ -144,8 +145,10 @@ mod tests
     }
 
     #[test]
-    fn speakers_playback()
+    fn speakers_playback() -> Result<(), String>
     {
+        let mutex = test_lock()?;
+
         let speakers = Speakers::new();
         assert!(!speakers.is_playing());
 
@@ -161,5 +164,7 @@ mod tests
 
         speakers.stop();
         assert!(!speakers.is_playing());
+
+        Ok(())
     }
 }

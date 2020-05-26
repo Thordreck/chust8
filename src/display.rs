@@ -25,7 +25,13 @@ pub struct Display
 
 impl Display
 {
-    pub fn new(window: Window) -> Result<Self, String>
+    pub fn from_context(context: &sdl2::Sdl) -> Result<Self, String>
+    {
+        let window = Self::default_window(&context)?;
+        Self::from_window(window)
+    }
+
+    pub fn from_window(window: Window) -> Result<Self, String>
     {
         let canvas = match window.into_canvas().present_vsync().build()
         {
@@ -114,15 +120,17 @@ impl Display
 mod tests
 {
     use super::*;
-
     use rand::Rng;
+    use crate::helpers::tests::*;
 
     #[test]
     fn display_init() -> Result<(), String>
     {
+        let mutex = test_lock()?;
+
         let context = sdl2::init()?;
         let window  = Display::default_window(&context)?;
-        let display = Display::new(window)?;
+        let display = Display::from_window(window)?;
 
         Ok(())
     }
@@ -130,9 +138,11 @@ mod tests
     #[test]
     fn display_update() -> Result<(), String>
     {
+        let mutex = test_lock()?;
+
         let context     = sdl2::init()?;
         let window      = Display::default_window(&context)?;
-        let mut display = Display::new(window)?;
+        let mut display = Display::from_window(window)?;
 
         // Set random pixels and display the result
         let mut rng  = rand::thread_rng();
@@ -150,6 +160,7 @@ mod tests
         }
 
         display.update()?;
+
         Ok(())
     }
 }

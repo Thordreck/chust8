@@ -8,10 +8,7 @@ fn main() -> Result<(), String>
 
     let rom_file = match args.len()
     {
-        1 => {
-                println!("Missing rom file. Usage is {} /path/to/rom", args[0]);
-                std::process::exit(-1);
-             },
+        1 => return Err(format!("Missing rom file. Usage is {} /path/to/rom", args[0])),
         _ => args[1].clone(),
     };
 

@@ -80,10 +80,13 @@ fn load_tileset<T>(texture_creator : &TextureCreator<T>) -> Result<Texture, Stri
 mod tests
 {
     use super::*;
+    use crate::helpers::tests::*;
 
     #[test]
     fn tileset_init() -> Result<(), String>
     {
+        let lock = test_lock()?;
+
         // Generate a sdl windows to display the tileset
         let context         = sdl2::init()?;
         let video_subsystem = context.video()?;

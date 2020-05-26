@@ -29,6 +29,7 @@ name = "chust8"
 version = "0.1.0"
 dependencies = [
  "arrayvec",
+ "lazy_static",
  "num-traits",
  "rand",
  "sdl2",
