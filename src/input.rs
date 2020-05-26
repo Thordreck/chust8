@@ -1,5 +1,6 @@
 
 use sdl2::keyboard::{ Scancode, KeyboardState };
+use sdl2::EventPump;
 
 const NUM_KEYS_KEYPAD : u8 = 16;
 
@@ -11,17 +12,20 @@ const DEFAULT_KEY_MAPPING : Keymap = [ Scancode::Q, Scancode::W, Scancode::E, Sc
                                        Scancode::H
                                      ];
 
-pub struct Keypad<'lifetime>
+pub struct Keypad
 {
-    keyboard: KeyboardState<'lifetime>,
-    keymap:   Keymap,
+    events : EventPump,
+    keymap : Keymap,
 }
 
-impl<'lifetime> Keypad<'lifetime>
+impl Keypad
 {
-    pub fn new(keyboard: KeyboardState<'lifetime>) -> Self
+    pub fn new(context : &sdl2::Sdl) -> Result<Self, String>
     {
-        return Keypad { keyboard: keyboard, keymap: DEFAULT_KEY_MAPPING };
+        let events = context.event_pump()?;
+        let keymap = DEFAULT_KEY_MAPPING;
+
+        Ok( Keypad { events, keymap } )
     }
 
     pub fn wait_for_key_pressed(&self) -> u8
@@ -41,7 +45,9 @@ impl<'lifetime> Keypad<'lifetime>
     pub fn is_key_pressed(&self, hex: u8) -> bool
     {
         let scan_code = self.to_scancode(hex);
-        return self.keyboard.is_scancode_pressed(scan_code);
+        let keyboard  = self.events.keyboard_state();
+
+        return keyboard.is_scancode_pressed(scan_code);
     }
 
     pub fn to_scancode(&self, hex: u8) -> Scancode
@@ -61,10 +67,8 @@ mod tests
     {
         let mutex = test_lock()?;
 
-        let context     = sdl2::init().unwrap();
-        let events_pump = context.event_pump().unwrap();
-
-        let keypad  = Keypad::new(events_pump.keyboard_state());
+        let context = sdl2::init().unwrap();
+        let keypad  = Keypad::new(&context)?;
 
         for hex in 0..NUM_KEYS_KEYPAD
         {

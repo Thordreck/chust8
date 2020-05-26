@@ -1,23 +1,39 @@
 
 use std::fs;
 
+use sdl2::Sdl;
+
 use crate::memory::{ Ram, ProgramCounter };
 use crate::opcodes::OpCode;
+use crate::display::Display;
+use crate::input::Keypad;
+use crate::audio::Speakers;
 
 //mod instructions;
 
 pub struct Interpreter
 {
-    ram : Ram,
-    program_counter : ProgramCounter,
+    ram      : Ram,
+    pc       : ProgramCounter,
+    context  : Sdl,
+    display  : Display,
+    keypad   : Keypad,
+    speakers : Speakers,
 }
 
 // Public
 impl Interpreter
 {
-    pub fn new() -> Self
+    pub fn new() -> Result<Self, String>
     {
-        return Self { ram: Ram::new(), program_counter: ProgramCounter::new() };
+        let context  = sdl2::init()?; 
+        let ram      = Ram::new();
+        let pc       = ProgramCounter::new();
+        let display  = Display::from_context(&context)?;
+        let keypad   = Keypad::new(&context)?;
+        let speakers = Speakers::new(&context)?;
+
+        Ok(Self { ram, pc, context, display, keypad, speakers })
     }
 
     pub fn load_rom(&mut self, rom_file: &str) -> Result<(), String>
@@ -68,11 +84,11 @@ impl Interpreter
     {
         let memory = self.ram.peek();
 
-        let msb = memory[self.program_counter.value()];
-        self.program_counter.advance(None)?;
+        let msb = memory[self.pc.value()];
+        self.pc.advance(None)?;
 
-        let lsb = memory[self.program_counter.value()];
-        self.program_counter.advance(None)?;
+        let lsb = memory[self.pc.value()];
+        self.pc.advance(None)?;
 
         Ok((msb, lsb))
     }
@@ -82,23 +98,31 @@ impl Interpreter
 mod tests
 {
     use super::*;
+    use crate::helpers::tests::*;
 
     #[test]
-    fn test_load_rom()
+    fn test_load_rom() -> Result<(), String>
     {
-        let mut interpreter = Interpreter::new();
+        let mutex = test_lock()?;
+
+        let mut interpreter = Interpreter::new()?;
 
         // Test loading a file that does not exist
         let invalid_load_result = interpreter.load_rom("invalid_file.ch8");
         assert!(invalid_load_result.is_err());
+
+        Ok(())
     }
 
     #[test]
-    fn test_cpu_cycle()
+    fn test_cpu_cycle() -> Result<(), String>
     {
-        let mut interpreter = Interpreter::new();
+        let mutex = test_lock()?;
 
-        interpreter.cpu_cycle();
+        let mut interpreter = Interpreter::new()?;
+
+        interpreter.cpu_cycle()?;
+        Ok(())
     }
 
 }

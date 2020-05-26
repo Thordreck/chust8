@@ -74,10 +74,9 @@ pub struct Speakers
 
 impl Speakers
 {
-    pub fn new() -> Speakers
+    pub fn new(context: &sdl2::Sdl) -> Result<Speakers, String>
     {
-        let context         = sdl2::init().unwrap();
-        let audio_subsystem = context.audio().unwrap();
+        let audio_subsystem = context.audio()?;
 
         let desired_spec = AudioSpecDesired
         {
@@ -91,9 +90,9 @@ impl Speakers
            SpeakersCallback::new(440.0, spec.freq as u16, 30000)
         };
 
-        let device = audio_subsystem.open_playback(None, &desired_spec, get_callback);
+        let device = audio_subsystem.open_playback(None, &desired_spec, get_callback)?;
 
-        return Speakers { device: device.unwrap() };
+        Ok( Speakers { device } )
     }
 
     pub fn start(&self)
@@ -149,7 +148,9 @@ mod tests
     {
         let mutex = test_lock()?;
 
-        let speakers = Speakers::new();
+        let context = sdl2::init()?;
+
+        let speakers = Speakers::new(&context)?;
         assert!(!speakers.is_playing());
 
         speakers.start();
