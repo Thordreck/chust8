@@ -35,8 +35,9 @@ impl IRegister
 
 const NUM_DATA_REGISTERS : usize = 16;
 
-type AllDataRegisters = ArrayVec::<[DataRegister; NUM_DATA_REGISTERS]>;
+pub type AllDataRegisters = ArrayVec::<[DataRegister; NUM_DATA_REGISTERS]>;
 
+#[derive(Clone)]
 pub struct DataRegister
 {
     value: u8,
@@ -47,6 +48,13 @@ impl DataRegister
     pub fn new() -> Self
     {
         return Self { value: 0 };
+    }
+
+    pub fn all() -> AllDataRegisters
+    {
+        std::iter::repeat(DataRegister::new())
+                .take(NUM_DATA_REGISTERS)
+                .collect::<AllDataRegisters>()
     }
 
     pub fn initialize_all() -> AllDataRegisters
@@ -170,5 +178,19 @@ mod tests
 
         assert_eq!(data_register.shift_left(), 0b0);
         assert_eq!(data_register.get(), test_value << 2);
+    }
+
+    #[test]
+    fn test_all_data_register_initialization()
+    {
+        let data_registers = DataRegister::all();
+
+        assert_eq!(data_registers.len(), NUM_DATA_REGISTERS);
+
+        for (index, register) in data_registers.iter().enumerate()
+        {
+            assert_eq!(register.value, 0,
+                       "Data register {} was not initialized properly", index);
+        }
     }
 }

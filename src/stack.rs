@@ -5,19 +5,19 @@ pub const STACK_SIZE : usize = 64;
 
 type InternalStorage = ArrayVec<[u8; STACK_SIZE]>;
 
-struct Stack
+pub struct Stack
 {
     data: InternalStorage,
 }
 
 impl Stack
 {
-    fn new() -> Self
+    pub fn new() -> Self
     {
         Stack { data: InternalStorage::new() }
     }
 
-    fn push(&mut self, value : u8) -> Result<(), String>
+    pub fn push(&mut self, value : u8) -> Result<(), String>
     {
         if self.data.is_full()
         {
@@ -28,7 +28,7 @@ impl Stack
         Ok(())
     }
 
-    fn pop(&mut self) -> Result<u8, String>
+    pub fn pop(&mut self) -> Result<u8, String>
     {
         let value = self.data.pop();
 

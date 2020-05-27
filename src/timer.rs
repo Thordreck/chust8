@@ -3,52 +3,64 @@ use num_traits::sign::Unsigned;
 use num_traits::identities::{ One, Zero };
 use std::ops::SubAssign;
 
-pub struct GeneralTimer<'lifetime, T: Copy + Unsigned + One + Zero + SubAssign>
+#[derive(Debug, PartialEq)]
+pub enum TimerStatus
 {
-    ticks : T,
-    start_callback: Option<Box<dyn FnMut() + 'lifetime>>,
-    end_callback: Option<Box<dyn FnMut() + 'lifetime>>,
+    Started,
+    Running,
+    End,
+    Stopped,
+}
+
+pub struct GeneralTimer<T>
+    where T: Copy + Unsigned + One + Zero + SubAssign
+{
+    ticks  : T,
+    status : TimerStatus,
 }
 
 // Public impl
-impl<'lifetime, T: Unsigned + One + Zero + SubAssign + Copy> GeneralTimer<'lifetime, T>
+impl<T> GeneralTimer<T>
+    where T: Copy + Unsigned + One + Zero + SubAssign
 {
-    pub fn new(start_callback : Option<Box<dyn FnMut() + 'lifetime>>,
-               end_callback   : Option<Box<dyn FnMut() + 'lifetime>>) -> Self
+    pub fn new() -> Self
     {
         GeneralTimer { ticks : T::zero(),
-                       start_callback: start_callback,
-                       end_callback: end_callback,
+                       status : TimerStatus::Stopped
                      }
     }
 
-    pub fn tick(&mut self)
+    pub fn tick(&mut self) -> TimerStatus
     {
-        if self.ticks == T::zero() { return; }
+        if self.ticks == T::zero() { return TimerStatus::Stopped; }
 
         self.ticks -= T::one();
 
-        if self.ticks == T::zero() && self.end_callback.is_some()
+        if self.ticks == T::zero()
         {
-            self.end_callback.as_mut().unwrap()();
+            return TimerStatus::End;
         }
+
+        TimerStatus::Running
     }
 
-    pub fn set_value(&mut self, new_value : T)
+    pub fn set_value(&mut self, new_value : T) -> TimerStatus 
     {
         let previous_value = self.ticks;
-
         self.ticks = new_value;
 
-        if self.ticks != T::zero() && self.start_callback.is_some()
+        // Note: I had to it like this since it's not possible
+        // to call functions such as T::zero() inside a match.
+        let value_change = (previous_value.is_zero(),
+                            self.ticks.is_zero());
+
+        use TimerStatus::*;
+        match value_change
         {
-            self.start_callback.as_mut().unwrap()();
-        }
-        else if previous_value != self.ticks
-                && self.ticks == T::zero()
-                && self.end_callback.is_some()
-        {
-            self.end_callback.as_mut().unwrap()();
+            (true,  true)  => Stopped,
+            (false, true)  => End,
+            (true,  false) => Started,
+            (false, false) => Running,
         }
     }
 
@@ -58,7 +70,7 @@ impl<'lifetime, T: Unsigned + One + Zero + SubAssign + Copy> GeneralTimer<'lifet
     }
 }
 
-pub type Timer<'lifetime> = GeneralTimer<'lifetime, u8>;
+pub type Timer = GeneralTimer<u8>;
 
 #[cfg(test)]
 mod tests
@@ -66,15 +78,17 @@ mod tests
     use super::*;
 
     #[test]
-    fn timer_no_callbacks()
+    fn timer_status()
     {
-        let mut timer = Timer::new(None, None);
+        use TimerStatus::*;
+
+        let mut timer = Timer::new();
 
         // Check that the timer is zero initialized
         assert_eq!(timer.get_value(), 0);
 
-        timer.tick();
-        timer.tick();
+        assert_eq!(timer.tick(), Stopped);
+        assert_eq!(timer.tick(), Stopped);
 
         // Check that no ticks do nothing if the timer is already
         // at zero
@@ -82,54 +96,35 @@ mod tests
 
         let timer_value = std::u8::MAX;
 
-        timer.set_value(timer_value);
-
+        assert_eq!(timer.set_value(timer_value), Started);
         assert_eq!(timer.get_value(), timer_value);
 
-        for step in 1..=timer_value
+        for step in 1..timer_value
         {
-            timer.tick();
+            assert_eq!(timer.tick(), Running,
+                      "Checking return value in iteration #{}", step);
             assert_eq!(timer.get_value(), timer_value - step,
                        "Timer ticked {} times", step);
         }
 
-        // Check that the timer has gone back to zero
+        assert_eq!(timer.get_value(), 1);
+
+        // Next tick should set the internal counter to
+        // zero and return end
+        assert_eq!(timer.tick(), End);
         assert_eq!(timer.get_value(), 0);
-    }
 
-    #[test]
-    fn timer_callbacks()
-    {
-        let mut start_counter = 0;
-        let mut end_counter = 0;
+        // Check all the return values for set_value()
+        // 1. Setting a non-zero value should trigger the started
+        // status only once
+        assert_eq!(timer.set_value(50), Started);
+        assert_eq!(timer.set_value(50), Running);
+        assert_eq!(timer.set_value(59), Running);
 
-        {
-            let start_callback = Box::new(|| start_counter += 1);
-            let end_callback   = Box::new(|| end_counter += 1);
+        // 2. Setting it to zero should trigger the End status
+        // only once
+        assert_eq!(timer.set_value(0), End);
+        assert_eq!(timer.set_value(0), Stopped);
 
-            let mut timer = Timer::new(Some(start_callback), Some(end_callback));
-
-            // Setting a timer to zero when it's already
-            // at zero shouldn't do anything
-            timer.set_value(0);
-
-            // Setting it to another number should
-            // activate the start_callback
-            timer.set_value(2);
-
-            // Ticking it once shouldn't affect
-            // the callbacks
-            timer.tick();
-
-            // Ticking it second time should make
-            // it reach zero and activate the end callback
-            timer.tick();
-        }
-
-        // At the end both callbacks should be only called once
-        // Checks are only done at the end so rustc does not complain
-        // about multiple references to the counter variables
-        assert_eq!(start_counter, 1);
-        assert_eq!(end_counter, 1);
     }
 }

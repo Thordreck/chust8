@@ -30,22 +30,20 @@ impl Frequency
 pub const DEFAULT_CPU_FREQUENCY    : Frequency = Frequency { hertz: 500.0 };
 pub const DEFAULT_TIMERS_FREQUENCY : Frequency = Frequency { hertz: 60.0 };
 
-pub struct RateLimiter<F>
-    where F: FnMut() -> Result<(), String>
+pub struct RateLimiter
 {
-    max_rate : Frequency,
-    function : F,
-    last_executed: Option<Instant>,
+    max_rate      : Frequency,
+    last_executed : Option<Instant>,
 }
 
-impl<F: FnMut() -> Result<(), String>> RateLimiter<F>
+impl RateLimiter
 {
-    pub fn new(function: F, max_rate: Frequency) -> Self
+    pub fn new(max_rate: Frequency) -> Self
     {
-        RateLimiter { max_rate, function, last_executed: None }
+        RateLimiter { max_rate, last_executed: None }
     }
 
-    pub fn execute(&mut self) -> Result<(), String>
+    pub fn check(&mut self) -> bool
     {
         if self.last_executed.is_none()
         {
@@ -58,10 +56,12 @@ impl<F: FnMut() -> Result<(), String>> RateLimiter<F>
         if elapsed >= self.max_rate.period()
         {
             self.last_executed = Some(now);
-            return (self.function)();
+            return true;
         }
-
-        Ok(())
+        else
+        {
+            return false;
+        }
     }
 }
 
@@ -117,32 +117,18 @@ mod tests
     #[test]
     fn rate_limiter() -> Result<(), String>
     {
-        let frequency        = Frequency::new(1000.0);
-        let lambda_frequency = frequency;
-        let test_time        = Duration::from_millis(100);
+        let frequency = Frequency::new(1000.0);
+        let test_time = Duration::from_millis(100);
 
         let mut counter = 1;
 
-        let lambda = ||
-        {
-            counter += 1;
-            if counter > (test_time.as_millis() / lambda_frequency.period().as_millis())
-            {
-                return Err(String::from("Closure was called too many times. \
-                                         Max frequency was not respected"));
-            }
-
-            Ok(())
-        };
-
-
-        let mut rate_limiter = RateLimiter::new(lambda, frequency);
+        let mut rate_limiter = RateLimiter::new(frequency);
 
         let start_time = SystemTime::now();
 
         while SystemTime::now().duration_since(start_time).unwrap() <= test_time
         {
-            rate_limiter.execute()?;
+            if rate_limiter.check() { counter += 1; }
         }
 
         let expected_value = test_time.as_millis() / frequency.period().as_millis();
